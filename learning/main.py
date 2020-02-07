@@ -339,10 +339,10 @@ def main():
                 print(BEST_COLOR + '-> New best model achieved!' + TRAIN_COLOR)
                 best_iou = avg_iou_val
                 new_best_model = True
-                torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(), 'optimizer' : optimizer.state_dict()},
+                torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(), 'optimizer' : optimizer.state_dict(), 'scaler': scaler},
                        os.path.join(args.odir, 'model.pth.tar'))
         elif epoch % args.save_nth_epoch == 0 or epoch==args.epochs-1:
-                torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(), 'optimizer' : optimizer.state_dict()},
+                torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(), 'optimizer' : optimizer.state_dict(), 'scaler': scaler},
                        os.path.join(args.odir, 'model.pth.tar'))
         #test every test_nth_epochs
         #or test after each enw model (but skip the first 5 for efficiency)
@@ -356,17 +356,19 @@ def main():
 
         stats.append({'epoch': epoch, 'acc': acc, 'loss': loss, 'oacc': oacc, 'avg_iou': avg_iou, 'acc_test': acc_test, 'oacc_test': oacc_test, 'avg_iou_test': avg_iou_test, 'avg_acc_test': avg_acc_test, 'best_iou' : best_iou})
 
+        """
         if epoch % args.save_nth_epoch == 0 or epoch==args.epochs-1:
             with open(os.path.join(args.odir, 'trainlog.json'), 'w') as outfile:
                 json.dump(stats, outfile,indent=4)
             torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(), 'optimizer' : optimizer.state_dict(), 'scaler': scaler},
                        os.path.join(args.odir, 'model.pth.tar'))
+        """
         
         if math.isnan(loss): break
     
-    if len(stats)>0:
-        with open(os.path.join(args.odir, 'trainlog.json'), 'w') as outfile:
-            json.dump(stats, outfile, indent=4)
+        if len(stats)>0:
+            with open(os.path.join(args.odir, 'trainlog.json'), 'w') as outfile:
+                json.dump(stats, outfile, indent=4)
 
     if args.use_val_set :
         args.resume = args.odir + '/model.pth.tar'
@@ -411,6 +413,10 @@ def resume(args, dbinfo):
     
 def create_model(args, dbinfo):
     """ Creates model """
+
+    if not 'use_pyg' in args:
+        args.use_pyg = 0
+
     model = nn.Module()
 
     nfeat = args.ptn_widths[1][-1]
